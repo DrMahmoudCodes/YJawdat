@@ -157,9 +157,9 @@ Write ONE short review only.
 Rules:
 
 • Start with what genuinely works.
-• Mention ONLY the highest-impact issue.
+• Mention ONLY the highest-impact issue (if found).
 • Explain WHY it matters.
-• Give ONE specific next step.
+• Give ONE specific next step (if necessary).
 • Maximum 120 words.
 • Never list the six criteria.
 • Never sound robotic.
@@ -201,7 +201,7 @@ ${isTraining
 : ""}
 
 ${(intake.otype === "Flash Card" || intake.otype === SERIES_TYPE)
-? "- Flash Card: Product name ALL CAPS bold. Active ingredient Sentence Case bold. HQ image. Reference. Company + Department logo."
+? "- Flash Card: Product name ALL CAPS bold. Active ingredient Sentence Case bold. HQ image. Selling Message in ARABIC. Summary in ARABIC. Mechanisma of Action. Indication or for whom. Reference. Company + Department logo."
 : ""}
 
 ${intake.otype === "Presentation / Deck"
