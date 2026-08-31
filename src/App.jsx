@@ -201,7 +201,7 @@ ${isTraining
 : ""}
 
 ${(intake.otype === "Flash Card" || intake.otype === SERIES_TYPE)
-? "- Flash Card: Product name ALL CAPS bold. Active ingredient Sentence Case bold. HQ image. Selling Message in ARABIC. Summary in ARABIC. Mechanisma of Action. Indication or for whom. Reference. Company + Department logo."
+? "- Flash Card: Product name ALL CAPS bold. Active ingredient Sentence Case bold. HQ image. Selling Message in ARABIC. Summary in ARABIC. Mechanisma of Action. Dose. Indication or for whom. Reference. Company + Department logo."
 : ""}
 
 ${intake.otype === "Presentation / Deck"
