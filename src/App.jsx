@@ -9,7 +9,7 @@ const BORDER="#E2EAF2",LIGHT="#F7FAFD",MUTED="#5A7A99",TEXT="#0a1929";
 const JAWDAT_IMG="data:image/jpeg;base64,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";
 
 
-const CAMPS=["CX 2025","Nutraceuticals Q1 2026","Skin Care Q2 2026","Skin Care Q3 2026","General / No active campaign"];
+const CAMPS=["CX 2025","Nutraceuticals Q1 2026","Skin Care Q2 2026","Skin Care Q3 2026","Skin Care Q4 2026","General / No active campaign"];
 const OTYPES=["Flash Card","Flash Card -- Series","Presentation / Deck","Facilitator Guide","E-learning Module","Training Session","Consultation","Other"];
 const AUDS=["Pharmacists","Pharmacy Supervisors","Area Managers","District Heads","Executives","HQ Teams","TM Team"];
 const CHANS=["WhatsApp -- USE Community","WhatsApp","LinkedIn -- Personal","LinkedIn -- Company Page","Email","In-session","SuccessFactors LMS","Internal document"];
@@ -27,6 +27,7 @@ const PASTE_HINTS={
 const PDF_TYPES=["Presentation / Deck","Facilitator Guide","Training Session","E-learning Module"];
 const IMAGE_TYPES=["Flash Card","Consultation"];
 const SERIES_TYPE="Flash Card -- Series";
+const PRODUCT_CATS=["Pharmaceutical","Cosmetic","Nutraceutical","General / Not product-specific"];
 const CHAN_GUIDANCE={
   "WhatsApp -- USE Community":"Mobile readability critical -- scannable on small screen, not too dense, key info visible without scrolling.",
   "WhatsApp":"Mobile readability critical -- scannable on small screen, not too dense.",
@@ -70,243 +71,53 @@ function cverd(run,ovs){
   return x>0?{label:"Fail",f,x}:f>0?{label:"Flag",f,x}:{label:"Pass",f:0,x:0};
 }
 
-// function buildPrompt(intake,runNum,history){
-//   const isTraining=intake.otype==="Training Session";
-//   const isConsult=intake.otype==="Consultation";
-//   const isSeries=intake.otype==="Flash Card -- Series";
-//   return `You are Ostaz Jawdat, United Pharmacy TM's internal quality reviewer. Senior Egyptian L&D professional. Warm, precise, genuinely invested in this team's work.
+function buildPrompt(intake,runNum,history){
+  const isTraining=intake.otype==="Training Session";
+  const isConsult=intake.otype==="Consultation";
+  const isSeries=intake.otype==="Flash Card -- Series";
+  return `You are Ostaz Jawdat, United Pharmacy TM's internal quality reviewer. Senior Egyptian L&D professional. Warm, precise, genuinely invested in this team's work.
 
-// RESPOND IN: ${intake.lang==="ar"?"Arabic (natural professional Egyptian Arabic)":"English"}
-// OUTPUT: ${intake.otype}${isTraining?` | ${intake.trainFormat} | ${intake.audSize}`:""}
-// AUDIENCE: ${intake.auds.join(", ")}
-// CHANNELS: ${intake.chans?.join(", ")||""}
-// CAMPAIGN: ${intake.camp}
-// RUN: ${runNum}${runNum>1?" (revised)":""}
+RESPOND IN: ${intake.lang==="ar"?"Arabic (natural professional Egyptian Arabic)":"English"}
+OUTPUT: ${intake.otype}${isTraining?` | ${intake.trainFormat} | ${intake.audSize}`:""}
+AUDIENCE: ${intake.auds.join(", ")}
+CHANNELS: ${intake.chans?.join(", ")||""}
+CAMPAIGN: ${intake.camp}
+RUN: ${runNum}${runNum>1?" (revised)":""}
+${intake.productCat?"PRODUCT CATEGORY: "+intake.productCat:""}
 
-// STYLE: Open with what works. Name the most important flag first. End with ONE next step. Max 120 words total. Never list robotically. Say the important thing once.
+STYLE: Open with what works -- specifically, not generically. Name the most important flag first. End with ONE next step. Max 120 words total. Never list robotically. Say the important thing once.
 
-// ONLY flag what you can directly observe. Never thank for changes you cannot visually confirm. If uncertain, say so.
-// When flagging: give a specific blueprint the creator can act on immediately.
+CLEAN PASS: If the output genuinely meets all criteria, say so warmly and directly -- do not invent feedback. One sentence on what makes it strong. One sentence confirming it is ready. No next step needed.
 
-// 6 CRITERIA:
-// 1. logic -- clear sequence, each element connects
-// 2. impact -- every element earns its place
-// 3. concision -- nothing unnecessary
-// 4. audience -- right depth, UPC-specific, correct level
-// 5. channel -- fits the channel. WhatsApp: mobile-readable, not dense. Email: subject line + length. LinkedIn Personal vs Company: tone differs. LMS: structured context.
-// 6. behavior -- moves from knowing to doing. USE = United Sales Excellence (Connecting, Questioning, Confirming / Providing, Handling, Closing / Encouraging at center). Output must move the pharmacist toward a specific step -- not just mention USE.
+ONLY flag what you can directly observe. Never thank for changes you cannot visually confirm. If uncertain, say so. When flagging: give a specific blueprint the creator can act on immediately.
 
-// RULES:
-// - Campaign mismatch = FLAG not Fail (output works, wrong category)
-// - ${intake.auds.length>1?"Multiple audiences: flag if one version can't serve all levels.":""}
-// - ${isConsult?"Consultation: check both -- answers the pharmacist who asked AND accessible to the full team.":""}
-// - ${isSeries?"Series: check consistency and logical flow across all cards.":""}
-// - ${isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video.":"Room logistics feasible."}`:""} 
-// - ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?"Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message present, HQ photo, reference cited, company + department logo both present.":""}
-// - ${intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":""}
+CONFIDENCE: Distinguish clearly. "This needs fixing:" = high confidence, objective, directly observable. "Worth considering:" = softer, subjective, a calibration note not a blocker.
 
-// ${history.length>0?"HISTORY:\n"+history.map(m=>(m.role==="user"?"Creator":"Ostaz Jawdat")+": "+m.content).join("\n"):""}
+6 CRITERIA:
+1. logic -- clear sequence, each element connects
+2. impact -- every element earns its place
+3. concision -- nothing unnecessary
+4. audience -- right depth, UPC-specific, correct level
+5. channel -- fits the channel. WhatsApp: mobile-readable, not dense. Email: subject line + length. LinkedIn Personal vs Company: tone differs. LMS: structured context.
+6. behavior -- moves from knowing to doing. USE = United Sales Excellence (Connecting, Questioning, Confirming / Providing, Handling, Closing / Encouraging at center). Must move pharmacist toward a specific step -- not just mention USE.
 
-// Always end with this JSON (invisible to user -- never mention it):
-// |||JSON
-// {"criteria":[{"id":"logic","verdict":"Pass|Flag|Fail","headline":"one line","detail":"2-4 specific sentences","revisionAction":null}],"overallVerdict":"Pass|Flag|Fail","nextStep":"one sentence"}
-// |||END
-// All 6 criteria always present. revisionAction null if Pass, specific string if Flag/Fail. Follow-up: include previous JSON unchanged.`;
-// }
+RULES:
+- Campaign mismatch = FLAG not Fail
+- ${intake.auds.length>1?"Multiple audiences: flag if one version genuinely cannot serve all levels.":""}
+- ${isConsult?"Consultation: answers the pharmacist who asked AND accessible to the full team.":""}
+- ${isSeries?"Series: consistency and logical flow across all cards.":""}
+- ${isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video check.":"Room logistics feasible."}`:""} 
+- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
+- ${intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":""}
 
-function buildPrompt(intake, runNum, history) {
+${history.length>0?"HISTORY:\n"+history.map(m=>(m.role==="user"?"Creator":"Ostaz Jawdat")+": "+m.content).join("\n"):""}
 
-  const isTraining = intake.otype === "Training Session";
-  const isConsult = intake.otype === "Consultation";
-  const isSeries = intake.otype === "Flash Card -- Series";
-
-  const historyText = history.length
-    ? history.slice(-4).map(m =>
-        `${m.role === "user" ? "Creator" : "Ostaz Jawdat"}: ${m.content}`
-      ).join("\n")
-    : "First interaction.";
-
-  return `
-You are Ostaz Jawdat, United Pharmacy Talent Management's internal quality reviewer.
-
-PERSONA
-- Senior Egyptian L&D expert.
-- Warm, direct, precise.
-- Encourage genuinely.
-- Calibrate, don't judge.
-- Feedforward, not criticism.
-
-LANGUAGE
-Respond entirely in ${intake.lang === "ar"
-    ? "natural professional Egyptian Arabic"
-    : "English"}.
-
-CONTEXT
-Output: ${intake.otype}
-${isTraining ? `Format: ${intake.trainFormat}` : ""}
-${isTraining ? `Audience Size: ${intake.audSize}` : ""}
-Audience: ${intake.auds.join(", ")}
-Channels: ${intake.chans?.join(", ") || "N/A"}
-Campaign: ${intake.camp}
-Run: ${runNum}${runNum > 1 ? " (Revision)" : ""}
-
-REVIEW STYLE
-
-Write ONE short review only.
-
-Rules:
-
-• Start with what genuinely works.
-• Mention ONLY the highest-impact issue (if found).
-• Explain WHY it matters.
-• Give ONE specific next step (if necessary).
-• Maximum 120 words.
-• Never list the six criteria.
-• Never sound robotic.
-• Never repeat yourself.
-
-QUALITY CRITERIA
-
-Evaluate silently using these:
-
-1. Logic
-2. Impact
-3. Concision
-4. Audience Fit
-5. Channel Fit
-6. Behavior Change (USE model)
-
-Special rules:
-
-${intake.auds.length > 1
-? "- Flag if one version cannot realistically serve all selected audiences."
-: ""}
-
-${isConsult
-? "- Consultation must answer both the pharmacist and the wider pharmacy team."
-: ""}
-
-${isSeries
-? "- Review consistency and progression across the whole series."
-: ""}
-
-${isTraining
-? `- Training:
-  • Timing realistic.
-  • Breaks included.
-  • Finish on time.
-  ${intake.trainFormat === "Virtual"
-    ? "• No lecture over 15 minutes.\n  • Flag missing engagement."
-    : "• Room logistics feasible."}`
-: ""}
-
-${(intake.otype === "Flash Card" || intake.otype === SERIES_TYPE)
-? "- Flash Card: Product name ALL CAPS bold. Active ingredient Sentence Case bold. HQ image. Selling Message in ARABIC. Summary in ARABIC. Mechanisma of Action. Dose. Indication or for whom. Reference. Company + Department logo."
-: ""}
-
-${intake.otype === "Presentation / Deck"
-? "- Presentation: branding, contrast, hierarchy, HQ visuals, consistency."
-: ""}
-
-GENERAL RULES
-
-- Only comment on things you can directly observe.
-- Never invent missing issues.
-- If uncertain, say so.
-- Campaign mismatch = FLAG (never Fail by itself).
-- Every Flag must include one concrete revision.
-
-RECENT HISTORY
-
-${historyText}
-
-===========================
-MANDATORY OUTPUT FORMAT
-===========================
-
-Return EXACTLY TWO sections.
-
-SECTION 1
-
-Natural review for the creator.
-
-SECTION 2
-
-Immediately after the review output EXACTLY:
-
+Always end with this JSON (invisible to user -- never mention it):
 |||JSON
-{
-  "criteria":[
-    {
-      "id":"logic",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"max 8 words",
-      "detail":"ONE concise sentence (max 20 words).",
-      "revisionAction":null
-    },
-    {
-      "id":"impact",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"",
-      "detail":"",
-      "revisionAction":null
-    },
-    {
-      "id":"concision",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"",
-      "detail":"",
-      "revisionAction":null
-    },
-    {
-      "id":"audience",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"",
-      "detail":"",
-      "revisionAction":null
-    },
-    {
-      "id":"channel",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"",
-      "detail":"",
-      "revisionAction":null
-    },
-    {
-      "id":"behavior",
-      "verdict":"Pass|Flag|Fail",
-      "headline":"",
-      "detail":"",
-      "revisionAction":null
-    }
-  ],
-  "overallVerdict":"Pass|Flag|Fail",
-  "nextStep":"ONE sentence (max 15 words)."
-}
+{"criteria":[{"id":"logic","verdict":"Pass|Flag|Fail","headline":"one line","detail":"2-4 specific sentences","revisionAction":null,"confidence":"high|soft"}],"overallVerdict":"Pass|Flag|Fail","nextStep":"one sentence or null if clean pass"}
 |||END
-
-FINAL RULES
-
-- Output EXACTLY ONE JSON block.
-- JSON MUST be valid.
-- Never wrap JSON in markdown.
-- Never explain the JSON.
-- Never output anything after |||END.
-- Never repeat previous JSON.
-- Never truncate the JSON.
-
-TOKEN BUDGET
-
-If you approach the output limit:
-
-1. Shorten the review.
-2. Shorten detail fields.
-3. Keep all six criteria.
-4. Keep valid JSON.
-5. Always output |||JSON and |||END.
-`;
+All 6 criteria always present. revisionAction null if Pass, specific string if Flag/Fail. confidence: "high" for objective issues, "soft" for calibration observations. Follow-up: include previous JSON unchanged.`;
 }
-
 
 function JawdatAvatar({size=32}){
   return(
@@ -475,40 +286,35 @@ function InlineReport({runs,ovs,onBack,onReset}){
   const tO=runs.reduce((a,r)=>a+Object.values(r.overrides||{}).filter(o=>o.overridden).length,0);
 
   function copyReport(){
+    // Build HTML and try clipboard
     const tF=runs.reduce((a,r)=>a+(r.criteria?.filter(c=>c.verdict!=="Pass").length||0),0);
     const tO=runs.reduce((a,r)=>a+Object.values(r.overrides||{}).filter(o=>o.overridden).length,0);
     const lRun=runs[runs.length-1];
     const fv=cverd(lRun,ovs);
     const html=buildReportHtml(runs,ovs,fv,tF,tO);
-    // Method 1: data URI anchor download (works when hosted)
-    try{
-      const blob=new Blob([html],{type:"text/html;charset=utf-8"});
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");
-      a.href=url;
-      a.download="ostaz_jawdat_report.html";
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-      setCopied(true);setTimeout(()=>setCopied(false),3000);
-      return;
-    }catch(e){}
-    // Method 2: window.open with print (sandbox fallback)
+    if(navigator.clipboard&&window.isSecureContext){
+      navigator.clipboard.writeText(html)
+        .then(()=>{setCopied(true);setTimeout(()=>setCopied(false),4000);})
+        .catch(()=>openReportWindow(html));
+    }else{
+      openReportWindow(html);
+    }
+  }
+  function openReportWindow(html){
     try{
       const w=window.open("","_blank");
-      if(w){
-        w.document.write(html);
-        w.document.close();
-        setTimeout(()=>w.print(),600);
-        setCopied(true);setTimeout(()=>setCopied(false),3000);
-        return;
+      if(w){w.document.write(html);w.document.close();setTimeout(()=>w.print(),500);}
+      else{
+        // Last resort - select all text
+        const el=reportRef.current;
+        if(el){const r=document.createRange();r.selectNode(el);window.getSelection().removeAllRanges();window.getSelection().addRange(r);}
+        setCopied(true);setTimeout(()=>setCopied(false),4000);
       }
-    }catch(e){}
-    // Method 3: clipboard (last resort)
-    navigator.clipboard&&navigator.clipboard.writeText(html)
-      .then(()=>{setCopied(true);setTimeout(()=>setCopied(false),4000);})
-      .catch(()=>{setCopied(true);setTimeout(()=>setCopied(false),4000);});
+    }catch(e){
+      const el=reportRef.current;
+      if(el){const r=document.createRange();r.selectNode(el);window.getSelection().removeAllRanges();window.getSelection().addRange(r);}
+      setCopied(true);setTimeout(()=>setCopied(false),4000);
+    }
   }
 
   return(
@@ -536,7 +342,7 @@ function InlineReport({runs,ovs,onBack,onReset}){
           {/* Copy button */}
           <div style={{display:"flex",justifyContent:"flex-end",marginBottom:12}}>
             <button onClick={copyReport} style={{fontSize:11,fontWeight:800,padding:"7px 18px",borderRadius:9,border:`1px solid ${BORDER}`,background:"#fff",color:copied?PASS:TEXT,cursor:"pointer",fontFamily:"inherit"}}>
-              {copied?"Downloaded!":"Download report"}
+              {copied?"Copied -- paste into .html file":"Get report"}
             </button>
           </div>
 
@@ -662,6 +468,7 @@ export default function App(){
   const [pdfName,setPdfName]=useState("");
   const [imgs,setImgs]=useState([]);
   const [otherLabel,setOtherLabel]=useState("");
+  const [productCat,setProductCat]=useState("");
   const [txt,setTxt]=useState("");
   const [messages,setMessages]=useState([]);
   const [input,setInput]=useState("");
@@ -747,20 +554,11 @@ export default function App(){
   }
 
   async function callJawdat(apiMessages,intake,isFirst){
-    const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text})); // last 3 exchanges
+    const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text}));
     const sys=buildPrompt(intake,runNumRef.current,hist);
-    // const res=await fetch("https://api.anthropic.com/v1/messages",{
-    //   method:"POST",headers:{"Content-Type":"application/json"},
-    //   body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
-    // });
-    const res=await fetch("/api/proxy",{
+    const res=await fetch("https://api.anthropic.com/v1/messages",{
       method:"POST",headers:{"Content-Type":"application/json"},
-      body: JSON.stringify({
-        model: "claude-sonnet-5",
-        max_tokens: 3000,
-        system: sys,
-        messages: apiMessages,
-      }),
+      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
     });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
@@ -785,7 +583,7 @@ export default function App(){
 
   async function startReview(){
     const effectiveOtype=otype==="Other"?(otherLabel.trim()||"Other"):otype;
-    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang};
+    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang,productCat};
     const userMsg=imgB64?"I've uploaded my output image for your review.":"I've shared my output for your review.";
     setMessages([{role:"user",text:userMsg}]);
     setActiveScreen("chat");setThinking(true);
@@ -812,7 +610,7 @@ export default function App(){
     setMessages(p=>[...p,{role:"user",text:displayMsg}]);
     setThinking(true);
     const effectiveOtype=otype==="Other"?(otherLabel.trim()||"Other"):otype;
-    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang};
+    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang,productCat};
     const aImg=followUpImgB64,aImgM=followUpImgMime,aPdf=followUpPdfB64,aPdfN=followUpPdfName;
     setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
     try{
@@ -842,7 +640,7 @@ export default function App(){
     setTrainFormat("");setAudSize("");clearUpload();setTxt("");
     setMessages([]);setInput("");setThinking(false);setRuns([]);setOvs({});
     setShowCriteria(false);runNumRef.current=1;
-    setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setLang("en");setCustomCamp("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
+    setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setLang("en");setCustomCamp("");setProductCat("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
   }
 
   // -- REPORT SCREEN ---------------------------------------------------------
@@ -882,15 +680,10 @@ export default function App(){
           {/* Intake form */}
           <div style={{background:"#fff",border:`0.5px solid ${BORDER}`,borderRadius:14,padding:"18px 20px",marginBottom:14}}>
 
-            <div style={{marginBottom:14,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:8}}>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED}}>New or revised?</div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>New or revised?</div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {["New","Revised"].map(t=><Chip key={t} label={t} on={rtype===t} onClick={()=>setRtype(t)}/>)}
-              </div>
-              <div style={{display:"flex",alignItems:"center",gap:6}}>
-                <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED}}>Output language:</div>
-                <button onClick={()=>setLang("en")} style={{fontSize:11,fontWeight:800,padding:"4px 14px",borderRadius:20,border:`1px solid ${lang==="en"?NAVY:BORDER}`,background:lang==="en"?NAVY:"#fff",color:lang==="en"?"#fff":MUTED,cursor:"pointer",fontFamily:"inherit"}}>EN</button>
-                <button onClick={()=>setLang("ar")} style={{fontSize:11,fontWeight:800,padding:"4px 14px",borderRadius:20,border:`1px solid ${lang==="ar"?NAVY:BORDER}`,background:lang==="ar"?NAVY:"#fff",color:lang==="ar"?"#fff":MUTED,cursor:"pointer",fontFamily:"inherit",fontFamily:"inherit"}}>{String.fromCharCode(1593,1585,1576,1610)}</button>
               </div>
             </div>
 
@@ -941,6 +734,15 @@ export default function App(){
               <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>Active campaign *</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>{CAMPS.map(c=><Chip key={c} label={c} on={camp===c} onClick={()=>setCamp(c)}/>)}</div>
               <div style={{fontSize:10,color:MUTED,fontWeight:600,fontStyle:"italic",marginTop:4}}>Campaign list managed by TM Head    Updated each quarter</div>
+            </div>
+
+            {/* Product category */}
+            <div style={{marginTop:14}}>
+              <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:6}}>Product category <span style={{fontSize:9,fontWeight:600,textTransform:"none",letterSpacing:0}}>optional -- affects what Ostaz Jawdat checks</span></div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                {PRODUCT_CATS.map(c=><Chip key={c} label={c} on={productCat===c} onClick={()=>setProductCat(p=>p===c?"":c)}/>)}
+              </div>
+              {productCat==="Cosmetic"&&<div style={{background:FLAGBG,border:`1px solid ${FLAGBD}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:FLAG,fontWeight:700,marginTop:8}}>Cosmetic mode active: reference, dose, and mechanism of action checks are skipped.</div>}
             </div>
           </div>
 
