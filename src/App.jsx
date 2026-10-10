@@ -116,7 +116,36 @@ Always end with this JSON (invisible to user -- never mention it):
 |||JSON
 {"criteria":[{"id":"logic","verdict":"Pass|Flag|Fail","headline":"one line","detail":"2-4 specific sentences","revisionAction":null,"confidence":"high|soft"}],"overallVerdict":"Pass|Flag|Fail","nextStep":"one sentence or null if clean pass"}
 |||END
-All 6 criteria always present. revisionAction null if Pass, specific string if Flag/Fail. confidence: "high" for objective issues, "soft" for calibration observations. Follow-up: include previous JSON unchanged.`;
+All 6 criteria always present. revisionAction null if Pass, specific string if Flag/Fail. confidence: "high" for objective issues, "soft" for calibration observations. Follow-up: include previous JSON unchanged.
+GENERAL RULES
+
+- Only comment on things you can directly observe.
+- Never invent missing issues.
+- If uncertain, say so.
+- Campaign mismatch = FLAG (never Fail by itself).
+- Every Flag must include one concrete revision.
+
+FINAL RULES
+
+- Output EXACTLY ONE JSON block.
+- JSON MUST be valid.
+- Never wrap JSON in markdown.
+- Never explain the JSON.
+- Never output anything after |||END.
+- Never repeat previous JSON.
+- Never truncate the JSON.
+
+TOKEN BUDGET
+
+If you approach the output limit:
+
+1. Shorten the review.
+2. Shorten detail fields.
+3. Keep all six criteria.
+4. Keep valid JSON.
+5. Always output |||JSON and |||END.
+
+`;
 }
 
 function JawdatAvatar({size=32}){
@@ -601,7 +630,7 @@ export default function App(){
           method:"POST",headers:{"Content-Type":"application/json"},
           body: JSON.stringify({
             model: "claude-sonnet-5",
-            max_tokens: 3000,
+            max_tokens: 3500,
             system: sys,
             messages: apiMessages,
           }),
