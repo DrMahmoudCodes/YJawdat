@@ -553,13 +553,59 @@ export default function App(){
     return{text,structured};
   }
 
+  // async function callJawdat(apiMessages,intake,isFirst){
+  //   const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text})); // last 3 exchanges
+  //   const sys=buildPrompt(intake,runNumRef.current,hist);
+  //   // const res=await fetch("https://api.anthropic.com/v1/messages",{
+  //   //   method:"POST",headers:{"Content-Type":"application/json"},
+  //   //   body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
+  //   // });
+  //   const res=await fetch("/api/proxy",{
+  //     method:"POST",headers:{"Content-Type":"application/json"},
+  //     body: JSON.stringify({
+  //       model: "claude-sonnet-5",
+  //       max_tokens: 3000,
+  //       system: sys,
+  //       messages: apiMessages,
+  //     }),
+  //   });
+  //   const data=await res.json();
+  //   if(data.error)throw new Error(data.error.message);
+  //   const raw=data.content?.find(b=>b.type==="text")?.text||"";
+  //   const{text,structured}=parseResponse(raw);
+  //   setMessages(p=>[...p,{role:"jawdat",text}]);
+  //   if(structured&&isFirst){
+  //     const newRun={
+  //       runNumber:runNumRef.current,runType:intake.rtype,
+  //       timestamp:new Date().toLocaleString("en-GB"),
+  //       intake:{...intake},inputType:intake.inputType||"text",
+  //       inputType:imgB64?"image":"text",
+  //       criteria:structured.criteria||[],
+  //       nextStep:structured.nextStep||"",
+  //       overallVerdict:structured.overallVerdict||"Flag",
+  //       jawdatMessage:text,
+  //       overrides:{},
+  //     };
+  //     setRuns(p=>[...p,newRun]);setOvs({});runNumRef.current+=1;setShowCriteria(true);
+  //   }
+  // }
+  
   async function callJawdat(apiMessages,intake,isFirst){
     const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text}));
     const sys=buildPrompt(intake,runNumRef.current,hist);
-    const res=await fetch("https://api.anthropic.com/v1/messages",{
-      method:"POST",headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
-    });
+    // const res=await fetch("https://api.anthropic.com/v1/messages",{
+    //   method:"POST",headers:{"Content-Type":"application/json"},
+    //   body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
+    // });
+    const res=await fetch("/api/proxy",{
+          method:"POST",headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({
+            model: "claude-sonnet-5",
+            max_tokens: 3000,
+            system: sys,
+            messages: apiMessages,
+          }),
+        });
     const data=await res.json();
     if(data.error)throw new Error(data.error.message);
     const raw=data.content?.find(b=>b.type==="text")?.text||"";
