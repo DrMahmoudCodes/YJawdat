@@ -93,6 +93,10 @@ ONLY flag what you can directly observe. Never thank for changes you cannot visu
 
 CONFIDENCE: Distinguish clearly. "This needs fixing:" = high confidence, objective, directly observable. "Worth considering:" = softer, subjective, a calibration note not a blocker.
 
+DENSITY: Before flagging density or length, count the actual elements on the output and state the number. Flag only if text would be unreadable at phone width or the count clearly exceeds what the format needs. Otherwise make it a soft "Worth considering". Sequenced routine cards (3-4 products in order) are expected to hold several items: judge readability, not item count.
+
+REVISION ACTIONS: Every revisionAction must state (1) WHAT to change, naming the exact element on the output, (2) HOW, with the replacement wording, layout or number, and (3) WHY, in a few words. No "consider" or "test". If you cannot give a specific edit, make the flag soft.
+
 6 CRITERIA:
 1. logic -- clear sequence, each element connects
 2. impact -- every element earns its place
@@ -107,7 +111,7 @@ RULES:
 - ${isConsult?"Consultation: answers the pharmacist who asked AND accessible to the full team.":""}
 - ${isSeries?"Series: consistency and logical flow across all cards.":""}
 - ${isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video check.":"Room logistics feasible."}`:""} 
-- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
+- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message and for whom present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Summary, Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
 - ${intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":""}
 
 ${history.length>0?"HISTORY:\n"+history.map(m=>(m.role==="user"?"Creator":"Ostaz Jawdat")+": "+m.content).join("\n"):""}
@@ -141,9 +145,8 @@ If you approach the output limit:
 
 1. Shorten the review.
 2. Shorten detail fields.
-3. Keep all six criteria.
-4. Keep valid JSON.
-5. Always output |||JSON and |||END.
+3. Keep valid JSON.
+4. Always output |||JSON and |||END.
 
 `;
 }
@@ -629,7 +632,7 @@ export default function App(){
     const res=await fetch("/api/proxy",{
           method:"POST",headers:{"Content-Type":"application/json"},
           body: JSON.stringify({
-            model: "claude-sonnet-5",
+            model: "claude-sonnet-5.5",
             max_tokens: 3500,
             system: sys,
             messages: apiMessages,
@@ -1037,14 +1040,32 @@ export default function App(){
       </div>
 
       <div style={{background:"#fff",borderTop:`0.5px solid ${BORDER}`,padding:"12px 16px",flexShrink:0}}>
-        <div style={{maxWidth:680,margin:"0 auto",display:"flex",gap:8,alignItems:"flex-end"}}>
-          <textarea value={input} onChange={e=>setInput(e.target.value)}
-            onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendFollowUp();}}}
-            placeholder="Ask Ostaz Jawdat a follow-up question..."
-            disabled={thinking} rows={1}
-            style={{flex:1,padding:"10px 14px",borderRadius:10,border:`0.5px solid ${BORDER}`,fontFamily:"inherit",fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.5,resize:"none",background:"#fff",outline:"none",opacity:thinking?.6:1}}/>
-          <button onClick={sendFollowUp} disabled={!input.trim()||thinking}
-            style={{background:input.trim()&&!thinking?NAVY:"#ccc",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",cursor:input.trim()&&!thinking?"pointer":"not-allowed",fontFamily:"inherit",fontSize:13,fontWeight:800,flexShrink:0}}>--&gt;</button>
+        <div style={{maxWidth:680,margin:"0 auto"}}>
+          {(followUpImgB64||followUpPdfB64)&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,background:PASSBG,border:`1px solid ${PASSBD}`,borderRadius:8,padding:"6px 10px",marginBottom:8}}>
+              {followUpImgB64&&<img src={`data:${followUpImgMime};base64,${followUpImgB64}`} alt="Attached" style={{width:30,height:30,borderRadius:5,objectFit:"cover",border:`1px solid ${PASSBD}`}}/>}
+              {followUpPdfB64&&<div style={{width:30,height:30,borderRadius:5,background:NAVY,color:"#fff",fontSize:9,fontWeight:800,display:"flex",alignItems:"center",justifyContent:"center"}}>PDF</div>}
+              <div style={{flex:1,fontSize:11,fontWeight:700,color:PASS,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{followUpImgB64?"Image attached":followUpPdfName||"PDF attached"}</div>
+              <button onClick={()=>{setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");}} style={{fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,border:`1px solid ${PASSBD}`,background:"#fff",color:PASS,cursor:"pointer",fontFamily:"inherit"}}>Remove</button>
+            </div>
+          )}
+          <div style={{display:"flex",gap:8,alignItems:"flex-end"}}>
+            <input ref={followUpImgRef} type="file" accept="image/png,image/jpeg" style={{display:"none"}}
+              onChange={e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const r=new FileReader();r.onload=ev=>{setFollowUpImgB64(ev.target.result.split(",")[1]);setFollowUpImgMime(f.type);setFollowUpPdfB64("");setFollowUpPdfName("");};r.readAsDataURL(f);}}/>
+            <input ref={followUpPdfRef} type="file" accept="application/pdf" style={{display:"none"}}
+              onChange={e=>{const f=e.target.files[0];e.target.value="";if(!f)return;const r=new FileReader();r.onload=ev=>{setFollowUpPdfB64(ev.target.result.split(",")[1]);setFollowUpPdfName(f.name);setFollowUpImgB64("");setFollowUpImgMime("");};r.readAsDataURL(f);}}/>
+            <button onClick={()=>followUpImgRef.current?.click()} disabled={thinking} title="Attach image"
+              style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${BORDER}`,background:"#fff",color:MUTED,cursor:thinking?"not-allowed":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,flexShrink:0}}>Image</button>
+            <button onClick={()=>followUpPdfRef.current?.click()} disabled={thinking} title="Attach PDF"
+              style={{padding:"10px 12px",borderRadius:10,border:`1px solid ${BORDER}`,background:"#fff",color:MUTED,cursor:thinking?"not-allowed":"pointer",fontFamily:"inherit",fontSize:11,fontWeight:800,flexShrink:0}}>PDF</button>
+            <textarea value={input} onChange={e=>setInput(e.target.value)}
+              onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendFollowUp();}}}
+              placeholder="Ask Ostaz Jawdat a follow-up question..."
+              disabled={thinking} rows={1}
+              style={{flex:1,padding:"10px 14px",borderRadius:10,border:`0.5px solid ${BORDER}`,fontFamily:"inherit",fontSize:13,fontWeight:600,color:TEXT,lineHeight:1.5,resize:"none",background:"#fff",outline:"none",opacity:thinking?.6:1}}/>
+            <button onClick={sendFollowUp} disabled={(!input.trim()&&!followUpImgB64&&!followUpPdfB64)||thinking}
+              style={{background:(input.trim()||followUpImgB64||followUpPdfB64)&&!thinking?NAVY:"#ccc",color:"#fff",border:"none",borderRadius:10,padding:"10px 16px",cursor:(input.trim()||followUpImgB64||followUpPdfB64)&&!thinking?"pointer":"not-allowed",fontFamily:"inherit",fontSize:13,fontWeight:800,flexShrink:0}}>--&gt;</button>
+          </div>
         </div>
       </div>
     </div>
