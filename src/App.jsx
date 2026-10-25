@@ -147,6 +147,7 @@ If you approach the output limit:
 2. Shorten detail fields.
 3. Keep valid JSON.
 4. Always output |||JSON and |||END.
+5. Never exceed the output limit of 2500 tokens.
 
 `;
 }
@@ -633,7 +634,7 @@ export default function App(){
           method:"POST",headers:{"Content-Type":"application/json"},
           body: JSON.stringify({
             model: "claude-sonnet-5",
-            max_tokens: 3000,
+            max_tokens: 3500,
             system: sys,
             messages: apiMessages,
           }),
