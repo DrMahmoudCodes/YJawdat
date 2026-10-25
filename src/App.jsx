@@ -147,7 +147,7 @@ If you approach the output limit:
 2. Shorten detail fields.
 3. Keep valid JSON.
 4. Always output |||JSON and |||END.
-5. Never exceed the overall output limit of 2500 tokens.
+5. Never exceed the overall output limit of 2500 tokens for both review and JSON output.
 
 `;
 }
@@ -634,7 +634,7 @@ export default function App(){
           method:"POST",headers:{"Content-Type":"application/json"},
           body: JSON.stringify({
             model: "claude-sonnet-5",
-            max_tokens: 4000,
+            max_tokens: 4500,
             system: sys,
             messages: apiMessages,
           }),
