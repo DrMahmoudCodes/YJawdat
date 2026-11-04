@@ -97,6 +97,8 @@ DENSITY: Before flagging density or length, count the actual elements on the out
 
 REVISION ACTIONS: Every revisionAction must state (1) WHAT to change, naming the exact element on the output, (2) HOW, with the replacement wording, layout or number, and (3) WHY, in a few words. No "consider" or "test". If you cannot give a specific edit, make the flag soft.
 
+SELLING MESSAGE (FAB): Classify each selling message as Feature (what it is or contains), Advantage (what it does) or Benefit (what the customer gets). Only a Benefit passes. If not, flag under impact: quote the line, name its type, and give a one-line benefit rewrite in the card's language, using only claims the card already supports. Confidence: high if the line is only ingredient or function words, soft if borderline.
+
 6 CRITERIA:
 1. logic -- clear sequence, each element connects
 2. impact -- every element earns its place
@@ -111,7 +113,7 @@ RULES:
 - ${isConsult?"Consultation: answers the pharmacist who asked AND accessible to the full team.":""}
 - ${isSeries?"Series: consistency and logical flow across all cards.":""}
 - ${isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video check.":"Room logistics feasible."}`:""} 
-- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message and for whom present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Summary, Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
+- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
 - ${intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":""}
 
 ${history.length>0?"HISTORY:\n"+history.map(m=>(m.role==="user"?"Creator":"Ostaz Jawdat")+": "+m.content).join("\n"):""}
@@ -147,7 +149,6 @@ If you approach the output limit:
 2. Shorten detail fields.
 3. Keep valid JSON.
 4. Always output |||JSON and |||END.
-5. Never exceed the overall output limit of 2000 tokens for both review and JSON output.
 
 `;
 }
@@ -634,7 +635,7 @@ export default function App(){
           method:"POST",headers:{"Content-Type":"application/json"},
           body: JSON.stringify({
             model: "claude-sonnet-5",
-            max_tokens: 4000,
+            max_tokens: 3500,
             system: sys,
             messages: apiMessages,
           }),
