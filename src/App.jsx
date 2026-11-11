@@ -27,7 +27,6 @@ const PASTE_HINTS={
 const PDF_TYPES=["Presentation / Deck","Facilitator Guide","Training Session","E-learning Module"];
 const IMAGE_TYPES=["Flash Card","Consultation"];
 const SERIES_TYPE="Flash Card -- Series";
-const PRODUCT_CATS=["Pharmaceutical","Cosmetic","Nutraceutical","General / Not product-specific"];
 const CHAN_GUIDANCE={
   "WhatsApp -- USE Community":"Mobile readability critical -- scannable on small screen, not too dense, key info visible without scrolling.",
   "WhatsApp":"Mobile readability critical -- scannable on small screen, not too dense.",
@@ -71,33 +70,148 @@ function cverd(run,ovs){
   return x>0?{label:"Fail",f,x}:f>0?{label:"Flag",f,x}:{label:"Pass",f:0,x:0};
 }
 
-function buildPrompt(intake,runNum,history){
+const PRODUCT_CATS=["Pharmaceutical","Cosmetic","Nutraceutical","General / Not product-specific"];
+
+// -- FLASH CARD TYPES ---------------------------------------------------------
+// Pharma cards split into OTC and Rx. Cosmo cards have their own element set.
+const FC_CATS=["Pharma","Cosmo"];
+const PHARMA_TYPES=["OTC","Rx"];
+const isFlashType=t=>t==="Flash Card"||t==="Flash Card -- Series";
+// Required elements per card type (edit these lists to change what is checked)
+const CARD_ELEMENTS={
+  OTC:["Summary","Selling Message","For Whom","Indication","Dose","Mechanism of Action"],
+  Rx:["Summary","Indication","Dose","Mechanism of Action"],
+  Cosmo:["Summary","Selling Message","For Whom","Key Benefits / Active Ingredients","How to Use"],
+};
+// Elements that may appear but must NOT be flagged when missing
+const CARD_OPTIONAL={
+  OTC:[],
+  Rx:["Selling Message","For Whom"],
+  Cosmo:[],
+};
+const CARD_FORMAT_RULES={
+  OTC:"Product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form in normal case, HQ product photo, reference cited, company + department logo both present.",
+  Rx:"Product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form in normal case, HQ product photo, reference cited, company + department logo both present. This is a prescription product: do not push consumer selling language.",
+  Cosmo:"Product name BOLD ALL CAPS, HQ product photo, company + department logo both present. Reference, dose and mechanism of action are NOT required for cosmetics -- never flag their absence.",
+};
+function cardKey(intake){
+  if(!isFlashType(intake.otype))return null;
+  if(intake.fcCat==="Cosmo")return "Cosmo";
+  if(intake.fcCat==="Pharma"&&PHARMA_TYPES.includes(intake.pharmaType))return intake.pharmaType;
+  return null;
+}
+function cardLabel(intake){
+  const k=cardKey(intake);
+  return k==="Cosmo"?"Cosmo":k?`Pharma -- ${k}`:"";
+}
+
+// -- STRUCTURED OUTPUT TOOL ---------------------------------------------------
+// The review comes back as a tool call, so the JSON never mixes with the text
+// the user sees and can never be shown half-written.
+const CRIT_IDS=["logic","impact","concision","audience","channel","behavior"];
+const REVIEW_TOOL={
+  name:"submit_review",
+  description:"Submit Ostaz Jawdat's review of the creator's output.",
+  input_schema:{
+    type:"object",
+    properties:{
+      message:{type:"string",description:"The review the creator reads. Max 120 words, in the required response language. No JSON, no lists of the six criteria."},
+      criteria:{
+        type:"array",minItems:6,maxItems:6,
+        items:{
+          type:"object",
+          properties:{
+            id:{type:"string",enum:CRIT_IDS},
+            verdict:{type:"string",enum:["Pass","Flag","Fail"]},
+            headline:{type:"string",description:"Max 8 words."},
+            detail:{type:"string",description:"1-2 specific sentences, max 40 words."},
+            revisionAction:{type:["string","null"],description:"null if Pass. Otherwise WHAT + HOW + WHY in one sentence."},
+            confidence:{type:"string",enum:["high","soft"]},
+          },
+          required:["id","verdict","headline","detail","revisionAction","confidence"],
+        },
+      },
+      cardElements:{
+        type:"array",
+        description:"Flash cards only: one entry per required element listed in the system prompt. Empty array for other output types.",
+        items:{
+          type:"object",
+          properties:{
+            name:{type:"string"},
+            status:{type:"string",enum:["Present","Weak","Missing"]},
+            note:{type:"string",description:"Max 15 words. Empty if Present and fine."},
+          },
+          required:["name","status","note"],
+        },
+      },
+      overallVerdict:{type:"string",enum:["Pass","Flag","Fail"]},
+      nextStep:{type:["string","null"],description:"One sentence, or null on a clean pass."},
+    },
+    required:["message","criteria","cardElements","overallVerdict","nextStep"],
+  },
+};
+
+function buildFlashCardRules(intake){
+  const k=cardKey(intake);
+  if(!k)return "";
+  const req=CARD_ELEMENTS[k];
+  const opt=CARD_OPTIONAL[k];
+  return `FLASH CARD TYPE: ${cardLabel(intake)}
+REQUIRED ELEMENTS (check each one, report each in cardElements in this exact order): ${req.join(", ")}.
+${opt.length?`OPTIONAL ELEMENTS (never flag if missing; if present, judge quality only): ${opt.join(", ")}.\n`:""}FORMAT: ${CARD_FORMAT_RULES[k]}
+A missing required element = Flag under logic (or impact for Selling Message). Name the element and say exactly what to add.
+${req.includes("Selling Message")?`SELLING MESSAGE (FAB): Classify the selling message as Feature (what it is or contains), Advantage (what it does) or Benefit (what the customer gets). Only a Benefit passes. If not, flag under impact: quote the line, name its type, and give a one-line benefit rewrite in the card's language, using only claims the card already supports.`:""}${k==="Rx"?"\nRx CARD: the audience is the pharmacist, not the consumer. Clinical accuracy (indication, dose, MoA) matters more than selling language.":""}`;
+}
+
+function buildPrompt(intake,runNum,mode){
+  // mode: "review" (returns structured review via tool) | "chat" (plain follow-up answer)
   const isTraining=intake.otype==="Training Session";
   const isConsult=intake.otype==="Consultation";
-  const isSeries=intake.otype==="Flash Card -- Series";
-  return `You are Ostaz Jawdat, United Pharmacy TM's internal quality reviewer. Senior Egyptian L&D professional. Warm, precise, genuinely invested in this team's work.
+  const isSeries=intake.otype===SERIES_TYPE;
+  const isFlash=isFlashType(intake.otype);
+  const langLine=intake.lang==="ar"?"Arabic (natural professional Egyptian Arabic)":"English";
 
-RESPOND IN: ${intake.lang==="ar"?"Arabic (natural professional Egyptian Arabic)":"English"}
+  const context=`You are Ostaz Jawdat, United Pharmacy TM's internal quality reviewer. Senior Egyptian L&D professional. Warm, precise, genuinely invested in this team's work.
+
+RESPOND IN: ${langLine}
 OUTPUT: ${intake.otype}${isTraining?` | ${intake.trainFormat} | ${intake.audSize}`:""}
 AUDIENCE: ${intake.auds.join(", ")}
 CHANNELS: ${intake.chans?.join(", ")||""}
 CAMPAIGN: ${intake.camp}
 RUN: ${runNum}${runNum>1?" (revised)":""}
-${intake.productCat?"PRODUCT CATEGORY: "+intake.productCat:""}
+${!isFlash&&intake.productCat?"PRODUCT CATEGORY: "+intake.productCat:""}`;
+
+  if(mode==="chat"){
+    return `${context}
+
+You already reviewed this output earlier in the conversation. The creator is now asking a follow-up question.
+Answer it directly in plain conversational text. Max 120 words. Do not output JSON or re-score the criteria.
+${isFlash?buildFlashCardRules(intake):""}`;
+  }
+
+  const rules=[
+    "Campaign mismatch = FLAG not Fail.",
+    intake.auds.length>1?"Multiple audiences: flag if one version genuinely cannot serve all levels.":"",
+    isConsult?"Consultation: answers the pharmacist who asked AND accessible to the full team.":"",
+    isSeries?"Series: consistency and logical flow across all cards. Images are labelled Card 1, Card 2... in order.":"",
+    isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video check.":"Room logistics feasible."}`:"",
+    !isFlash&&intake.productCat==="Cosmetic"?"Cosmetic mode: reference, dose, MoA checks skipped.":"",
+    intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":"",
+  ].filter(Boolean).map(r=>"- "+r).join("\n");
+
+  return `${context}
 
 STYLE: Open with what works -- specifically, not generically. Name the most important flag first. End with ONE next step. Max 120 words total. Never list robotically. Say the important thing once.
 
-CLEAN PASS: If the output genuinely meets all criteria, say so warmly and directly -- do not invent feedback. One sentence on what makes it strong. One sentence confirming it is ready. No next step needed.
+CLEAN PASS: If the output genuinely meets all criteria, say so warmly and directly -- do not invent feedback. One sentence on what makes it strong. One sentence confirming it is ready. nextStep = null.
 
-ONLY flag what you can directly observe. Never thank for changes you cannot visually confirm. If uncertain, say so. When flagging: give a specific blueprint the creator can act on immediately.
+ONLY flag what you can directly observe. Never thank for changes you cannot visually confirm. If uncertain, say so.
 
-CONFIDENCE: Distinguish clearly. "This needs fixing:" = high confidence, objective, directly observable. "Worth considering:" = softer, subjective, a calibration note not a blocker.
+CONFIDENCE: "This needs fixing:" = high confidence, objective, directly observable. "Worth considering:" = soft, subjective, a calibration note not a blocker.
 
-DENSITY: Before flagging density or length, count the actual elements on the output and state the number. Flag only if text would be unreadable at phone width or the count clearly exceeds what the format needs. Otherwise make it a soft "Worth considering". Sequenced routine cards (3-4 products in order) are expected to hold several items: judge readability, not item count.
+DENSITY: Before flagging density or length, count the actual elements and state the number. Flag only if text would be unreadable at phone width or the count clearly exceeds what the format needs. Sequenced routine cards (3-4 products in order) are expected to hold several items: judge readability, not item count.
 
-REVISION ACTIONS: Every revisionAction must state (1) WHAT to change, naming the exact element on the output, (2) HOW, with the replacement wording, layout or number, and (3) WHY, in a few words. No "consider" or "test". If you cannot give a specific edit, make the flag soft.
-
-SELLING MESSAGE (FAB): Classify each selling message as Feature (what it is or contains), Advantage (what it does) or Benefit (what the customer gets). Only a Benefit passes. If not, flag under impact: quote the line, name its type, and give a one-line benefit rewrite in the card's language, using only claims the card already supports. Confidence: high if the line is only ingredient or function words, soft if borderline.
+REVISION ACTIONS: Every revisionAction states WHAT to change (exact element), HOW (replacement wording, layout or number) and WHY (a few words). No "consider" or "test". If you cannot give a specific edit, make the flag soft.
 
 6 CRITERIA:
 1. logic -- clear sequence, each element connects
@@ -105,52 +219,14 @@ SELLING MESSAGE (FAB): Classify each selling message as Feature (what it is or c
 3. concision -- nothing unnecessary
 4. audience -- right depth, UPC-specific, correct level
 5. channel -- fits the channel. WhatsApp: mobile-readable, not dense. Email: subject line + length. LinkedIn Personal vs Company: tone differs. LMS: structured context.
-6. behavior -- moves from knowing to doing. USE = United Sales Excellence (Connecting, Questioning, Confirming / Providing, Handling, Closing / Encouraging at center). Must move pharmacist toward a specific step -- not just mention USE.
+6. behavior -- moves from knowing to doing. USE = United Sales Excellence (Connecting, Questioning, Confirming / Providing, Handling, Closing / Encouraging at center). Must move the pharmacist toward a specific step -- not just mention USE.
 
 RULES:
-- Campaign mismatch = FLAG not Fail
-- ${intake.auds.length>1?"Multiple audiences: flag if one version genuinely cannot serve all levels.":""}
-- ${isConsult?"Consultation: answers the pharmacist who asked AND accessible to the full team.":""}
-- ${isSeries?"Series: consistency and logical flow across all cards.":""}
-- ${isTraining?`Training (${intake.trainFormat}): timing realistic, breaks built in, end time respected. ${intake.trainFormat==="Virtual"?"No lectures >15 min. Flag audio/video check.":"Room logistics feasible."}`:""} 
-- ${(intake.otype==="Flash Card"||intake.otype===SERIES_TYPE)?`Flash Card: product name BOLD ALL CAPS, active ingredient Sentence Case Bold, form normal case, selling message present if OTC Product only, HQ photo, company + department logo both present.${intake.productCat==="Cosmetic"?" (Cosmetic mode: reference, dose, MoA checks skipped.)":" Reference cited. Dose, Indication, for whom, and mechanism relevant if pharmaceutical."}`:""} 
-- ${intake.otype==="Presentation / Deck"?"Deck: brand colors, contrast, HQ visuals, slide consistency, font discipline, intentional bullets.":""}
+${rules}
 
-${history.length>0?"HISTORY:\n"+history.map(m=>(m.role==="user"?"Creator":"Ostaz Jawdat")+": "+m.content).join("\n"):""}
+${isFlash?buildFlashCardRules(intake):""}
 
-Always end with this JSON (invisible to user -- never mention it):
-|||JSON
-{"criteria":[{"id":"logic","verdict":"Pass|Flag|Fail","headline":"one line","detail":"2-4 specific sentences","revisionAction":null,"confidence":"high|soft"}],"overallVerdict":"Pass|Flag|Fail","nextStep":"one sentence or null if clean pass"}
-|||END
-All 6 criteria always present. revisionAction null if Pass, specific string if Flag/Fail. confidence: "high" for objective issues, "soft" for calibration observations. Follow-up: include previous JSON unchanged.
-GENERAL RULES
-
-- Only comment on things you can directly observe.
-- Never invent missing issues.
-- If uncertain, say so.
-- Campaign mismatch = FLAG (never Fail by itself).
-- Every Flag must include one concrete revision.
-
-FINAL RULES
-
-- Output EXACTLY ONE JSON block.
-- JSON MUST be valid.
-- Never wrap JSON in markdown.
-- Never explain the JSON.
-- Never output anything after |||END.
-- Never repeat previous JSON.
-- Never truncate the JSON.
-
-TOKEN BUDGET
-
-If you approach the output limit:
-
-1. Shorten the review.
-2. Shorten detail fields.
-3. Keep valid JSON.
-4. Always output |||JSON and |||END.
-
-`;
+OUTPUT: Call the submit_review tool exactly once. Put the creator-facing review in "message". All 6 criteria always present, in order: ${CRIT_IDS.join(", ")}. Keep every field short -- brevity beats completeness.${isFlash?"":" cardElements = []."}`;
 }
 
 function JawdatAvatar({size=32}){
@@ -190,6 +266,24 @@ function TypingDots(){
           animation:`bounce 1.2s ease-in-out ${i*0.15}s infinite`}}/>
       ))}
       <style>{`@keyframes bounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-6px)}}`}</style>
+    </div>
+  );
+}
+
+function CardElements({items,label}){
+  if(!items||items.length===0)return null;
+  const col=st=>st==="Present"?PASS:st==="Weak"?FLAG:FAIL;
+  const bg=st=>st==="Present"?PASSBG:st==="Weak"?FLAGBG:FAILBG;
+  return(
+    <div style={{marginBottom:10}}>
+      <div style={{fontSize:9,fontWeight:800,textTransform:"uppercase",letterSpacing:".1em",color:MUTED,margin:"10px 0 5px"}}>Card elements{label?` -- ${label}`:""}</div>
+      {items.map((it,i)=>(
+        <div key={i} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"6px 0",borderTop:i>0?`0.5px solid ${BORDER}`:"none"}}>
+          <span style={{fontSize:9,fontWeight:800,padding:"2px 8px",borderRadius:20,textTransform:"uppercase",background:bg(it.status),color:col(it.status),flexShrink:0,minWidth:58,textAlign:"center"}}>{it.status}</span>
+          <div style={{fontSize:11,fontWeight:800,color:TEXT,flexShrink:0}}>{it.name}</div>
+          {it.note&&<div style={{fontSize:11,color:MUTED,fontWeight:600,lineHeight:1.5}}>{it.note}</div>}
+        </div>
+      ))}
     </div>
   );
 }
@@ -270,6 +364,7 @@ function buildReportHtml(runs,ovs,fv,tF,tO){
   html += '<div><div class="cl">Audience</div><div class="cv">'+(runs[0]?.intake.auds?.join(', ')||'')+'</div></div>';
   html += '<div><div class="cl">Channels</div><div class="cv">'+(runs[0]?.intake.chans?.join(', ')||'')+'</div></div>';
   html += '<div><div class="cl">Campaign</div><div class="cv">'+(runs[0]?.intake.camp||'')+'</div></div>';
+  if(runs[0]&&cardLabel(runs[0].intake)) html += '<div><div class="cl">Flash card type</div><div class="cv">'+cardLabel(runs[0].intake)+'</div></div>';
   if(runs[0]?.intake.audSize) html += '<div><div class="cl">Audience size</div><div class="cv">'+runs[0].intake.audSize+'</div></div>';
   html += '</div><div class="g2">';
   html += '<div><div class="cl">Total runs</div><div class="cv">'+runs.length+'</div></div>';
@@ -281,6 +376,13 @@ function buildReportHtml(runs,ovs,fv,tF,tO){
   runs.forEach(function(run){
     html += '<h2>Run '+run.runNumber+' -- '+run.runType+' -- '+run.timestamp+'</h2><div class="rb">';
     if(run.jawdatMessage) html += '<div class="msg"><strong>Ostaz Jawdat:</strong><br>'+run.jawdatMessage.replace(/</g,'&lt;').replace(/>/g,'&gt;')+'</div>';
+    if(run.cardElements&&run.cardElements.length){
+      html += '<h3>Card elements</h3>';
+      run.cardElements.forEach(function(it){
+        var cls=it.status==='Present'?'Pass':it.status==='Weak'?'Flag':'Fail';
+        html += '<div class="cb"><span class="tg '+cls+'">'+it.status+'</span> <strong>'+it.name+'</strong>'+(it.note?' -- '+it.note:'')+'</div>';
+      });
+    }
     ['Content Quality','Reach & Relevance'].forEach(function(g){
       html += '<h3>'+g+'</h3>';
       CRIT_LIST.filter(function(c){return c.group===g;}).forEach(function(c){
@@ -394,7 +496,8 @@ function InlineReport({runs,ovs,onBack,onReset}){
               {[
                 ["Output type",runs[0]?.intake.otype+(runs[0]?.intake.trainFormat?"    "+runs[0].intake.trainFormat:"")],
                 ["Audience",runs[0]?.intake.auds.join(", ")],
-                ["Channel",runs[0]?.intake.chan],
+                ["Channel",runs[0]?.intake.chans?.join(", ")],
+                ...(cardLabel(runs[0]?.intake||{})?[["Flash card type",cardLabel(runs[0].intake)]]:[]),
                 ["Campaign",runs[0]?.intake.camp],
                 ...(runs[0]?.intake.audSize?[["Audience size",runs[0].intake.audSize]]:[]),
               ].map(([l,v])=>(
@@ -424,6 +527,7 @@ function InlineReport({runs,ovs,onBack,onReset}){
                     </div>
                   )}
 
+                  <CardElements items={run.cardElements} label={cardLabel(run.intake)}/>
                   {/* Criteria table */}
                   {["Content Quality","Reach & Relevance"].map(g=>(
                     <div key={g} style={{marginBottom:10}}>
@@ -503,6 +607,8 @@ export default function App(){
   const [imgs,setImgs]=useState([]);
   const [otherLabel,setOtherLabel]=useState("");
   const [productCat,setProductCat]=useState("");
+  const [fcCat,setFcCat]=useState("");
+  const [pharmaType,setPharmaType]=useState("");
   const [txt,setTxt]=useState("");
   const [messages,setMessages]=useState([]);
   const [input,setInput]=useState("");
@@ -532,7 +638,9 @@ export default function App(){
   const isPdf=PDF_TYPES.includes(otype);
   const isImageOnly=IMAGE_TYPES.includes(otype);
   const isOther=otype==="Other";
-  const intakeValid=otype&&auds.length>0&&chans.length>0&&camp&&(!isTraining||(trainFormat&&audSize))&&(!isOther||otherLabel.trim().length>0);
+  const isFlash=isFlashType(otype);
+  const flashValid=!isFlash||fcCat==="Cosmo"||(fcCat==="Pharma"&&PHARMA_TYPES.includes(pharmaType));
+  const intakeValid=otype&&auds.length>0&&chans.length>0&&camp&&(!isTraining||(trainFormat&&audSize))&&(!isOther||otherLabel.trim().length>0)&&flashValid;
   const outputValid=imgB64||pdfB64||imgs.length>0||(txt.trim().length>20);
   const brandGatePassed=brandGateDone&&Object.values(brandGate).every(v=>v===true);
   const brandGateFailed=Object.values(brandGate).some(v=>v===false);
@@ -579,105 +687,134 @@ export default function App(){
     return"text";
   }
 
+  // Robust fallback parser -- used only if the proxy drops the tool call and
+  // the model answers in text. Never lets raw JSON reach the user.
   function parseResponse(raw){
-    const m=raw.match(/\|\|\|JSON\n([\s\S]*?)\|\|\|END/);
-    const text=raw.replace(/\|\|\|JSON[\s\S]*?\|\|\|END/,"").trim();
+    let text=raw||"",jsonPart="";
+    const marker=text.search(/\|\|\|\s*JSON/i);
+    const fence=text.search(/```(?:json)?\s*\{/i);
+    const bare=text.search(/\{\s*"(criteria|message|overallVerdict)"/);
+    const cut=[marker,fence,bare].filter(i=>i!==-1).sort((x,y)=>x-y)[0];
+    if(cut!==undefined){
+      jsonPart=text.slice(cut);
+      text=text.slice(0,cut);
+    }
     let structured=null;
-    if(m){try{structured=JSON.parse(m[1].trim());}catch(e){}}
+    if(jsonPart){
+      jsonPart=jsonPart.replace(/^\|\|\|\s*JSON/i,"").split(/\|\|\|\s*END/i)[0].replace(/```(json)?/gi,"");
+      const a=jsonPart.indexOf("{"),b=jsonPart.lastIndexOf("}");
+      if(a!==-1&&b>a){try{structured=JSON.parse(jsonPart.slice(a,b+1));}catch(e){}}
+    }
+    text=text.trim();
+    if(!text&&structured?.message)text=structured.message;
     return{text,structured};
   }
 
-  // async function callJawdat(apiMessages,intake,isFirst){
-  //   const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text})); // last 3 exchanges
-  //   const sys=buildPrompt(intake,runNumRef.current,hist);
-  //   // const res=await fetch("https://api.anthropic.com/v1/messages",{
-  //   //   method:"POST",headers:{"Content-Type":"application/json"},
-  //   //   body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
-  //   // });
-  //   const res=await fetch("/api/proxy",{
-  //     method:"POST",headers:{"Content-Type":"application/json"},
-  //     body: JSON.stringify({
-  //       model: "claude-sonnet-5",
-  //       max_tokens: 3000,
-  //       system: sys,
-  //       messages: apiMessages,
-  //     }),
-  //   });
-  //   const data=await res.json();
-  //   if(data.error)throw new Error(data.error.message);
-  //   const raw=data.content?.find(b=>b.type==="text")?.text||"";
-  //   const{text,structured}=parseResponse(raw);
-  //   setMessages(p=>[...p,{role:"jawdat",text}]);
-  //   if(structured&&isFirst){
-  //     const newRun={
-  //       runNumber:runNumRef.current,runType:intake.rtype,
-  //       timestamp:new Date().toLocaleString("en-GB"),
-  //       intake:{...intake},inputType:intake.inputType||"text",
-  //       inputType:imgB64?"image":"text",
-  //       criteria:structured.criteria||[],
-  //       nextStep:structured.nextStep||"",
-  //       overallVerdict:structured.overallVerdict||"Flag",
-  //       jawdatMessage:text,
-  //       overrides:{},
-  //     };
-  //     setRuns(p=>[...p,newRun]);setOvs({});runNumRef.current+=1;setShowCriteria(true);
-  //   }
-  // }
-  
-  async function callJawdat(apiMessages,intake,isFirst){
-    const hist=messages.slice(-6).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text}));
-    const sys=buildPrompt(intake,runNumRef.current,hist);
-    // const res=await fetch("https://api.anthropic.com/v1/messages",{
-    //   method:"POST",headers:{"Content-Type":"application/json"},
-    //   body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:3000,system:sys,messages:apiMessages}),
-    // });
+  function readReply(data){
+    const tool=data.content?.find(b=>b.type==="tool_use"&&b.name==="submit_review");
+    if(tool?.input&&Array.isArray(tool.input.criteria)){
+      return{text:(tool.input.message||"").trim(),structured:tool.input};
+    }
+    const raw=(data.content||[]).filter(b=>b.type==="text").map(b=>b.text).join("\n");
+    return parseResponse(raw);
+  }
+
+  // Keep the actual file only on the most recent message that carried one,
+  // so follow-ups still "see" the output without resending every image.
+  function toApiMessages(list){
+    let lastApi=-1;
+    list.forEach((m,i)=>{if(m.api)lastApi=i;});
+    return list.map((m,i)=>({
+      role:m.role==="jawdat"?"assistant":"user",
+      content:i===lastApi?m.api:m.text,
+    }));
+  }
+
+  async function postToProxy(body){
     const res=await fetch("/api/proxy",{
-          method:"POST",headers:{"Content-Type":"application/json"},
-          body: JSON.stringify({
-            model: "claude-sonnet-5",
-            max_tokens: 3500,
-            system: sys,
-            messages: apiMessages,
-          }),
-        });
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(body),
+    });
     const data=await res.json();
-    if(data.error)throw new Error(data.error.message);
-    const raw=data.content?.find(b=>b.type==="text")?.text||"";
-    const{text,structured}=parseResponse(raw);
-    setMessages(p=>[...p,{role:"jawdat",text}]);
-    if(structured&&isFirst){
+    if(data.error)throw new Error(data.error.message||String(data.error));
+    return data;
+  }
+
+  async function callJawdat(apiMessages,intake,isReview){
+    const sys=buildPrompt(intake,runNumRef.current,isReview?"review":"chat");
+    const base={model:"claude-sonnet-5",system:sys,messages:apiMessages};
+    if(isReview){
+      base.tools=[REVIEW_TOOL];
+      base.tool_choice={type:"tool",name:"submit_review"};
+    }
+    // Try once; if the reply was cut off, retry once with more room and a brevity nudge.
+    let data=await postToProxy({...base,max_tokens:4000});
+    if(data.stop_reason==="max_tokens"){
+      data=await postToProxy({...base,max_tokens:8000,
+        system:sys+"\n\nIMPORTANT: Your previous attempt ran out of space. Keep every field to the minimum length."});
+    }
+    const truncated=data.stop_reason==="max_tokens";
+    const{text,structured}=readReply(data);
+    const validReview=isReview&&!truncated&&structured&&Array.isArray(structured.criteria)&&structured.criteria.length>0;
+
+    let shown=text;
+    if(!shown||(isReview&&!validReview)){
+      shown=intake.lang==="ar"
+        ?"معلش، الرد اتقطع قبل ما يكمل. دوس إرسال تاني أو ابعت \"كمّل\"."
+        :"Sorry -- my reply got cut off before it finished. Please send it again.";
+    }
+    setMessages(p=>[...p,{role:"jawdat",text:shown}]);
+
+    if(validReview){
       const newRun={
         runNumber:runNumRef.current,runType:intake.rtype,
         timestamp:new Date().toLocaleString("en-GB"),
         intake:{...intake},inputType:intake.inputType||"text",
-        inputType:imgB64?"image":"text",
         criteria:structured.criteria||[],
+        cardElements:structured.cardElements||[],
         nextStep:structured.nextStep||"",
         overallVerdict:structured.overallVerdict||"Flag",
-        jawdatMessage:text,
+        jawdatMessage:shown,
         overrides:{},
       };
       setRuns(p=>[...p,newRun]);setOvs({});runNumRef.current+=1;setShowCriteria(true);
     }
   }
 
-  async function startReview(){
+  function buildIntake(rt){
     const effectiveOtype=otype==="Other"?(otherLabel.trim()||"Other"):otype;
-    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang,productCat};
-    const userMsg=imgB64?"I've uploaded my output image for your review.":"I've shared my output for your review.";
-    setMessages([{role:"user",text:userMsg}]);
+    return{otype:effectiveOtype,rtype:rt||rtype,auds:[...auds],chans:[...chans],camp,
+      trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang,
+      productCat:isFlash?"":productCat,fcCat:isFlash?fcCat:"",pharmaType:isFlash&&fcCat==="Pharma"?pharmaType:""};
+  }
+
+  // Sends whatever was uploaded: series images, single image, PDF, or pasted text.
+  function buildReviewContent(){
+    if(imgs.length>0){
+      return[
+        ...imgs.flatMap((im,i)=>[
+          {type:"text",text:`Card ${i+1}:`},
+          {type:"image",source:{type:"base64",media_type:im.mime,data:im.b64}},
+        ]),
+        {type:"text",text:`Please review this series of ${imgs.length} cards, in this order.`},
+      ];
+    }
+    if(imgB64)return[{type:"image",source:{type:"base64",media_type:imgMime,data:imgB64}},{type:"text",text:"Please review this output."}];
+    if(pdfB64)return[{type:"document",source:{type:"base64",media_type:"application/pdf",data:pdfB64}},{type:"text",text:"Please review this output."}];
+    return`Please review this output:\n\n${txt}`;
+  }
+
+  async function startReview(){
+    const intake=buildIntake();
+    const userMsg=imgs.length>0?`I've uploaded ${imgs.length} cards for your review.`
+      :imgB64?"I've uploaded my output image for your review."
+      :pdfB64?"I've uploaded my output PDF for your review."
+      :"I've shared my output for your review.";
+    const first={role:"user",text:userMsg,api:buildReviewContent()};
+    setMessages([first]);
     setActiveScreen("chat");setThinking(true);
     try{
-      let apiMsgs;
-      if(imgB64){
-        apiMsgs=[{role:"user",content:[
-          {type:"image",source:{type:"base64",media_type:imgMime,data:imgB64}},
-          {type:"text",text:"Please review this output."}
-        ]}];
-      }else{
-        apiMsgs=[{role:"user",content:`Please review this output:\n\n${txt}`}];
-      }
-      await callJawdat(apiMsgs,intake,true);
+      await callJawdat(toApiMessages([first]),intake,true);
     }catch(e){
       setMessages(p=>[...p,{role:"jawdat",text:`Something went wrong -- ${e.message}. Try again?`}]);
     }finally{setThinking(false);}
@@ -686,24 +823,19 @@ export default function App(){
   async function sendFollowUp(){
     if((!input.trim()&&!followUpImgB64&&!followUpPdfB64)||thinking)return;
     const msg=input.trim();setInput("");
-    const displayMsg=msg||(followUpImgB64?"[Image attached]":"[PDF attached]");
-    setMessages(p=>[...p,{role:"user",text:displayMsg}]);
-    setThinking(true);
-    const effectiveOtype=otype==="Other"?(otherLabel.trim()||"Other"):otype;
-    const intake={otype:effectiveOtype,rtype,auds:[...auds],chans:[...chans],camp,trainFormat:isTraining?trainFormat:"",audSize:isTraining?audSize:"",inputType:getInputType(),lang,productCat};
-    const aImg=followUpImgB64,aImgM=followUpImgMime,aPdf=followUpPdfB64,aPdfN=followUpPdfName;
+    const aImg=followUpImgB64,aImgM=followUpImgMime,aPdf=followUpPdfB64;
     setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
+    const isReview=!!(aImg||aPdf); // a new file = a revised version -> new scored run
+    const displayMsg=msg||(aImg?"[Image attached]":"[PDF attached]");
+    let api;
+    if(aImg)api=[{type:"image",source:{type:"base64",media_type:aImgM,data:aImg}},{type:"text",text:msg||"Please review this updated version."}];
+    else if(aPdf)api=[{type:"document",source:{type:"base64",media_type:"application/pdf",data:aPdf}},{type:"text",text:msg||"Please review this updated version."}];
+    const userEntry={role:"user",text:displayMsg,...(api?{api}:{})};
+    const hist=[...messages,userEntry];
+    setMessages(hist);
+    setThinking(true);
     try{
-      const hist=[...messages,{role:"user",text:displayMsg}];
-      let lastContent;
-      if(aImg){lastContent=[{type:"image",source:{type:"base64",media_type:aImgM,data:aImg}},{type:"text",text:msg||"Please review this updated version."}];}
-      else if(aPdf){lastContent=[{type:"document",source:{type:"base64",media_type:"application/pdf",data:aPdf}},{type:"text",text:msg||"Please review this updated version."}];}
-      else{lastContent=msg;}
-      const apiMsgs=[
-        ...hist.slice(0,-1).map(m=>({role:m.role==="jawdat"?"assistant":"user",content:m.text})),
-        {role:"user",content:lastContent}
-      ];
-      await callJawdat(apiMsgs,intake,false);
+      await callJawdat(toApiMessages(hist),buildIntake(isReview?"Revised":undefined),isReview);
     }catch(e){
       setMessages(p=>[...p,{role:"jawdat",text:`Something went wrong -- ${e.message}.`}]);
     }finally{setThinking(false);}
@@ -720,7 +852,7 @@ export default function App(){
     setTrainFormat("");setAudSize("");clearUpload();setTxt("");
     setMessages([]);setInput("");setThinking(false);setRuns([]);setOvs({});
     setShowCriteria(false);runNumRef.current=1;
-    setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setLang("en");setCustomCamp("");setProductCat("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
+    setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setLang("en");setCustomCamp("");setProductCat("");setFcCat("");setPharmaType("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");
   }
 
   // -- REPORT SCREEN ---------------------------------------------------------
@@ -761,16 +893,27 @@ export default function App(){
           <div style={{background:"#fff",border:`0.5px solid ${BORDER}`,borderRadius:14,padding:"18px 20px",marginBottom:14}}>
 
             <div style={{marginBottom:14}}>
-              <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>New or revised?</div>
-              <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {["New","Revised"].map(t=><Chip key={t} label={t} on={rtype===t} onClick={()=>setRtype(t)}/>)}
+              <div style={{display:"flex",alignItems:"flex-end",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
+                <div>
+                  <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>New or revised?</div>
+                  <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                    {["New","Revised"].map(t=><Chip key={t} label={t} on={rtype===t} onClick={()=>setRtype(t)}/>)}
+                  </div>
+                </div>
+                <div>
+                  <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>Review language</div>
+                  <div style={{display:"flex",gap:6}}>
+                    <Chip label="EN" on={lang==="en"} onClick={()=>setLang("en")}/>
+                    <Chip label={"\u0639\u0631\u0628\u064A"} on={lang==="ar"} onClick={()=>setLang("ar")}/>
+                  </div>
+                </div>
               </div>
             </div>
 
             <div style={{marginBottom:14}}>
               <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>Output type *</div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
-                {OTYPES.map(t=><Chip key={t} label={t} on={otype===t} onClick={()=>{setOtype(t);setTrainFormat("");setAudSize("");clearUpload();setTxt("");setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setLang("en");setCustomCamp("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");}}/>)}
+                {OTYPES.map(t=><Chip key={t} label={t} on={otype===t} onClick={()=>{setOtype(t);setTrainFormat("");setAudSize("");clearUpload();setTxt("");setBrandGate({q1:null,q2:null,q3:null,q4:null,q5:null});setBrandGateDone(false);setOtherLabel("");setCustomCamp("");setFcCat("");setPharmaType("");setFollowUpImgB64("");setFollowUpImgMime("");setFollowUpPdfB64("");setFollowUpPdfName("");}}/>)}
               </div>
               {isConsult&&<div style={{background:LIGHT,border:`0.5px solid ${BORDER}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:MUTED,fontWeight:600,lineHeight:1.5,marginTop:8}}>Reviewed for both the pharmacist who asked and the full team who will receive it.</div>}
               {otype==="Flash Card -- Series"&&<div style={{background:LIGHT,border:`0.5px solid ${BORDER}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:MUTED,fontWeight:600,lineHeight:1.5,marginTop:8}}>I will check consistency and flow across the full set -- not just individual cards.</div>}
@@ -783,6 +926,32 @@ export default function App(){
                 </div>
               )}
             </div>
+
+            {isFlash&&(
+              <div style={{marginBottom:14,background:LIGHT,border:`0.5px solid ${BORDER}`,borderRadius:10,padding:"12px 14px"}}>
+                <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>Flash card category *</div>
+                <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                  {FC_CATS.map(c=><Chip key={c} label={c} on={fcCat===c} onClick={()=>{setFcCat(c);if(c!=="Pharma")setPharmaType("");}}/>)}
+                </div>
+                {fcCat==="Pharma"&&(
+                  <div style={{marginTop:10}}>
+                    <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:5}}>Product type *</div>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {PHARMA_TYPES.map(t=><Chip key={t} label={t} on={pharmaType===t} onClick={()=>setPharmaType(t)}/>)}
+                    </div>
+                  </div>
+                )}
+                {(fcCat==="Cosmo"||PHARMA_TYPES.includes(pharmaType))&&(()=>{
+                  const k=fcCat==="Cosmo"?"Cosmo":pharmaType;
+                  return(
+                    <div style={{fontSize:11,color:MUTED,fontWeight:600,lineHeight:1.6,marginTop:10}}>
+                      <strong style={{color:NAVY}}>Will check:</strong> {CARD_ELEMENTS[k].join(" · ")}
+                      {CARD_OPTIONAL[k].length>0&&<div><strong style={{color:NAVY}}>Not required:</strong> {CARD_OPTIONAL[k].join(" · ")}</div>}
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
             {isTraining&&(
               <>
@@ -816,14 +985,14 @@ export default function App(){
               <div style={{fontSize:10,color:MUTED,fontWeight:600,fontStyle:"italic",marginTop:4}}>Campaign list managed by TM Head    Updated each quarter</div>
             </div>
 
-            {/* Product category */}
-            <div style={{marginTop:14}}>
+            {/* Product category (flash cards use the category picker above) */}
+            {!isFlash&&<div style={{marginTop:14}}>
               <div style={{fontSize:10,fontWeight:800,textTransform:"uppercase",letterSpacing:".08em",color:MUTED,marginBottom:6}}>Product category <span style={{fontSize:9,fontWeight:600,textTransform:"none",letterSpacing:0}}>optional -- affects what Ostaz Jawdat checks</span></div>
               <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                 {PRODUCT_CATS.map(c=><Chip key={c} label={c} on={productCat===c} onClick={()=>setProductCat(p=>p===c?"":c)}/>)}
               </div>
               {productCat==="Cosmetic"&&<div style={{background:FLAGBG,border:`1px solid ${FLAGBD}`,borderRadius:8,padding:"8px 12px",fontSize:11,color:FLAG,fontWeight:700,marginTop:8}}>Cosmetic mode active: reference, dose, and mechanism of action checks are skipped.</div>}
-            </div>
+            </div>}
           </div>
 
           {/* Brand gate */}
@@ -970,7 +1139,7 @@ export default function App(){
             <div style={{fontSize:13,fontWeight:900,color:"#fff"}}>Ostaz Jawdat</div>
             <div style={{display:"flex",alignItems:"center",gap:5}}>
               <div style={{width:6,height:6,borderRadius:"50%",background:PASS}}/>
-              <div style={{fontSize:10,color:"rgba(255,255,255,.5)",fontWeight:600}}>Active    {otype}{isTraining&&trainFormat?"    "+trainFormat:""}    {camp}</div>
+              <div style={{fontSize:10,color:"rgba(255,255,255,.5)",fontWeight:600}}>Active    {otype}{isFlash&&fcCat?"    "+(fcCat==="Pharma"?`Pharma ${pharmaType}`:fcCat):""}{isTraining&&trainFormat?"    "+trainFormat:""}    {camp}</div>
             </div>
           </div>
         </div>
@@ -1020,6 +1189,7 @@ export default function App(){
                   {vicon(finalVerdict.label)} {finalVerdict.label}
                 </div>
               </div>
+              <CardElements items={currentRun.cardElements} label={cardLabel(currentRun.intake)}/>
               {["Content Quality","Reach & Relevance"].map(g=>(
                 <div key={g}>
                   <div style={{fontSize:9,fontWeight:800,textTransform:"uppercase",letterSpacing:".1em",color:MUTED,margin:"10px 0 5px"}}>{g}</div>
